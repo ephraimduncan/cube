@@ -3642,5 +3642,9 @@ class Game {
   }
 }
 
+document.addEventListener('keydown', ({ keyCode }) => {
+  if (keyCode === 81) window.close();
+});
+
 window.version = '0.99.2';
 window.game = new Game();
