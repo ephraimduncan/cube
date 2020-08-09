@@ -4,22 +4,90 @@ on:
   push:
     branches:
       - main
+    tags:
+      - v*
+  pull_request:
 
 jobs:
-  release:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12.x
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+      - uses: actions/cache@v1
+        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+      - name: Install
+        run: yarn
+
+  build:
+    needs: lint
+    name: Build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [macOS-latest, ubuntu-latest, windows-latest]
     steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v1
-      - name: Install Node.js
+      - uses: actions/checkout@v2
+      - name: Setup Node.js
         uses: actions/setup-node@v1
         with:
-          node-version: 10
-      - name: Build & Release
-        uses: yinxulai/actions-electron-forge@0.05
+          node-version: 12.x
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+      - uses: actions/cache@v1
+        if: matrix.os != 'macOS-latest'
+        id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
         with:
-          github_token: ${{ secrets.github_token }}
-          release: ${{ startsWith(github.ref, 'refs/tags/v') }}
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Download disk image (ps1)
+        run: tools/download-disk.ps1
+        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/')
+        env:
+          DISK_URL: ${{ secrets.DISK_URL }}
+      - name: Download disk image (sh)
+        run: chmod +x tools/download-disk.sh && ./tools/download-disk.sh
+        if: matrix.os != 'windows-latest' && startsWith(github.ref, 'refs/tags/')
+        env:
+          DISK_URL: ${{ secrets.DISK_URL }}
+      - name: Install
+        run: yarn
+      - name: Make
+        if: startsWith(github.ref, 'refs/tags/')
+        run: yarn make
+      - name: Make (ia32)
+        if: matrix.os == 'windows-latest' && startsWith(github.ref, 'refs/tags/')
+        run: yarn make -- --arch=ia32
+      # - name: Archive production artifacts
+      #   uses: actions/upload-artifact@v2
+      #   with:
+      #     name: ${{ matrix.os }}
+      #     path: out/make/**/*
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          draft: true
+          files: |
+            out/**/*.deb
+            out/**/*.dmg
+            out/**/*setup*.exe
+            out/**/*.rpm
+            out/**/*.zip
