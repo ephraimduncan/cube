@@ -2,14 +2,13 @@
   "name": "cube",
   "productName": "cube",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "Virtual Rubik's Cube",
   "main": "src/index.js",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
-    "publish": "electron-forge publish",
-    "lint": "echo \"No linting configured\""
+    "publish": "electron-forge publish"
   },
   "keywords": [],
   "author": {
@@ -18,31 +17,7 @@
   },
   "license": "MIT",
   "config": {
-    "forge": {
-      "packagerConfig": {},
-      "makers": [
-        {
-          "name": "@electron-forge/maker-squirrel",
-          "config": {
-            "name": "cube"
-          }
-        },
-        {
-          "name": "@electron-forge/maker-zip",
-          "platforms": [
-            "darwin"
-          ]
-        },
-        {
-          "name": "@electron-forge/maker-deb",
-          "config": {}
-        },
-        {
-          "name": "@electron-forge/maker-rpm",
-          "config": {}
-        }
-      ]
-    }
+    "forge": "./forge.config.js"
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.0"
