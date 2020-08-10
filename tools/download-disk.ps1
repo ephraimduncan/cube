@@ -2,7 +2,8 @@ mkdir images
 cd images
 
 $wc = New-Object System.Net.WebClient
-$wc.DownloadFile($env:DISK_URL, "$(Resolve-Path .)\images.zip")
+$path = "$(Resolve-Path .)\images.zip"
+$wc.DownloadFile($env:DISK_URL, $path)
 
 7z x images.zip -y -aoa
 Remove-Item images.zip
